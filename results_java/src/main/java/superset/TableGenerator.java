@@ -1,4 +1,4 @@
-package supersetas;
+package superset;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -30,10 +30,10 @@ import ai.libs.jaicore.db.sql.DatabaseAdapterFactory;
 public class TableGenerator {
 
 	// list defining the order of methods in which they are presented in the generated table (from left to right)
-	private static final List<String> ORDER_OF_METHODS = Arrays.asList("ignore_censored", "clip_censored", "par10", "schmee_hahn", "superset");
+	private static final List<String> ORDER_OF_METHODS = Arrays.asList("ignore-censored", "clip-censored", "par10", "schmee-hahn", "superset");
 
 	// DB connection config & init
-	private static final IDatabaseConfig isysDBConfig = (IDatabaseConfig) ConfigFactory.create(IDatabaseConfig.class).loadPropertiesFromFile(new File("isys-db.properties"));
+	private static final IDatabaseConfig isysDBConfig = (IDatabaseConfig) ConfigFactory.create(IDatabaseConfig.class).loadPropertiesFromFile(new File("database.properties"));
 	private static final IDatabaseAdapter isysDBAdapter = DatabaseAdapterFactory.get(isysDBConfig);
 
 	// output file name
@@ -47,13 +47,14 @@ public class TableGenerator {
 		// create a hashmap which is inserted in each of the loaded KVStores containing the imputation type.
 		Map<String, String> commonFields = new HashMap<>();
 		commonFields.put(IMP_TYPE, table.substring(new String("linear_model_tf").length() + 1).replace("_", "-"));
+
+		// determine the index for ordering the methods
 		for (int i = 0; i < ORDER_OF_METHODS.size(); i++) {
 			if (ORDER_OF_METHODS.get(i).equals(commonFields.get(IMP_TYPE))) {
 				commonFields.put(ORDER, i + "");
 				break;
 			}
 		}
-		System.out.println(commonFields);
 
 		// load KVStoreCollection from the given table adding the imputation type obtained from the table's name to each row
 		col.addAll(KVStoreUtil.readFromMySQLQuery(isysDBAdapter, String.format("SELECT * FROM %s WHERE metric=\"par10\"", table), commonFields));
@@ -85,12 +86,11 @@ public class TableGenerator {
 		Map<String, DescriptiveStatistics> avgpar10 = KVStoreStatisticsUtil.averageRank(grouped, "imputation_type", "result");
 
 		// sort the data according to the scenario name as first priority and then by the order as defined in the ORDER list.
-		grouped.sort(new KVStoreSequentialComparator("scenario_name", ORDER));
+		grouped.sort(new KVStoreSequentialComparator(ORDER, "scenario_name"));
 
 		// Conduct wilcoxon signed rank sum test for significance testing
 		// As the setting, we consider >scenario_name< for each of which we compare the >result_list< of the imputation_type >superset< to all other >imputation_type<s pairing via the >fold< number.
 		// The result is stored in the field >sig<.
-		System.out.println(grouped.get(0));
 		KVStoreStatisticsUtil.wilcoxonSignedRankTest(grouped, "scenario_name", "imputation_type", "fold", "result_list", "superset", "sig");
 
 		// add the average ranks of each imputation method as another row
@@ -141,9 +141,12 @@ public class TableGenerator {
 				sb.append(" (");
 				// rank for this scenario
 				sb.append(store.getAsString("rank"));
+
+				// TODO: This should at least be removed for the submission.
 				sb.append("/");
 				// number of folds evaluated so far (shoudl definitely be commented out/removed for submission)
 				sb.append(store.getAsStringList("fold").size());
+				// TODO: /End
 				sb.append(")");
 
 				// update the cell entry value
@@ -176,6 +179,7 @@ public class TableGenerator {
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(OUTPUT_FILENAME_LINEAR_MODELS)))) {
 			bw.write(latexTable);
 		}
+		System.out.println("Done: Wrote generated table to file " + OUTPUT_FILENAME_LINEAR_MODELS);
 
 	}
 }

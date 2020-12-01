@@ -14,9 +14,7 @@ plugins {
 	id 'java'
 	id 'eclipse'
 	id 'idea'
-	//id 'org.openjfx.javafxplugin' version '0.0.5'
 }
-apply plugin: 'com.github.johnrengelman.shadow'
 
 eclipse {
     classpath {
@@ -24,10 +22,6 @@ eclipse {
         downloadSources = true
     }
 }
-
-//javafx {
-//    modules = [ 'javafx.controls', 'javafx.swing', 'javafx.web' ]
-//}
 
 sourceSets {
     main {
@@ -50,11 +44,6 @@ sourceSets {
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
-}
 
 dependencies {    
     // include ailibs for compilation
@@ -73,41 +62,12 @@ dependencies {
     testImplementation('junit:junit:4.11')
 }
 
-task mlplanCLI(type: Jar) {
-    zip64 = true
-    manifest {
-		attributes 'Main-Class': 'ai.libs.mlplan.cli.MLPlanCLI'
-    }
-    destinationDir = file("${projectDir}/cli")
-    archivesBaseName = 'mlplan-cli'
-    archiveVersion = '0.2.3'
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-    from sourceSets.main.allSource
-    from { configurations.compile.collect {
-    		it.isDirectory() ? it : zipTree(it)
-    	}
-    }
-    with jar
+
+task generateTable(type: JavaExec) {
+  classpath sourceSets.main.runtimeClasspath
+  main = "superset.TableGenerator"
 }
 
-
-
-
-shadowJar {
-    mergeServiceFiles()
-}
-
-jar {
-    manifest {
-        attributes(
-            'Main-Class': "dagmlc.PipelineTester"
-            //'Main-Class': "ai.libs.mlplan.experimenter.MLPlanExperimenter"
-        )
-    }
-}
-
-configurations {
-}
 
 repositories {
 	mavenCentral()
@@ -116,9 +76,3 @@ repositories {
 	maven { url "https://plugins.gradle.org/m2/" }
 }
 
-test {
-    testLogging {
-        outputs.upToDateWhen {false}
-        showStandardStreams = true
-    }
-}
