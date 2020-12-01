@@ -33,7 +33,7 @@ public class TableGenerator {
 	private static final List<String> ORDER_OF_METHODS = Arrays.asList("ignore_censored", "clip_censored", "par10", "schmee_hahn", "superset");
 
 	// DB connection config & init
-	private static final IDatabaseConfig isysDBConfig = (IDatabaseConfig) ConfigFactory.create(IDatabaseConfig.class).loadPropertiesFromFile(new File("database.properties"));
+	private static final IDatabaseConfig isysDBConfig = (IDatabaseConfig) ConfigFactory.create(IDatabaseConfig.class).loadPropertiesFromFile(new File("isys-db.properties"));
 	private static final IDatabaseAdapter isysDBAdapter = DatabaseAdapterFactory.get(isysDBConfig);
 
 	// output file name
@@ -53,6 +53,7 @@ public class TableGenerator {
 				break;
 			}
 		}
+		System.out.println(commonFields);
 
 		// load KVStoreCollection from the given table adding the imputation type obtained from the table's name to each row
 		col.addAll(KVStoreUtil.readFromMySQLQuery(isysDBAdapter, String.format("SELECT * FROM %s WHERE metric=\"par10\"", table), commonFields));
@@ -87,9 +88,10 @@ public class TableGenerator {
 		grouped.sort(new KVStoreSequentialComparator("scenario_name", ORDER));
 
 		// Conduct wilcoxon signed rank sum test for significance testing
-		// As the setting, we consider scenario_name where we compare the results of the imputation_type superset to all other imputation_types pairing via the fold number.
-		// The result is stored in the field "sig".
-		KVStoreStatisticsUtil.wilcoxonSignedRankTest(grouped, "scenario_name", "imputation_type", "fold", "results", "superset", "sig");
+		// As the setting, we consider >scenario_name< for each of which we compare the >result_list< of the imputation_type >superset< to all other >imputation_type<s pairing via the >fold< number.
+		// The result is stored in the field >sig<.
+		System.out.println(grouped.get(0));
+		KVStoreStatisticsUtil.wilcoxonSignedRankTest(grouped, "scenario_name", "imputation_type", "fold", "result_list", "superset", "sig");
 
 		// add the average ranks of each imputation method as another row
 		for (Entry<String, DescriptiveStatistics> entry : avgranks.entrySet()) {
@@ -152,10 +154,10 @@ public class TableGenerator {
 			if (store.containsKey("sig")) {
 				String sigAppendix = null;
 				switch (ESignificanceTestResult.valueOf(store.getAsString("sig"))) {
-				case SUPERIOR:
+				case INFERIOR:
 					sigAppendix = "$\\bullet$";
 					break;
-				case INFERIOR:
+				case SUPERIOR:
 					sigAppendix = "$\\circ";
 					break;
 				case TIE:
