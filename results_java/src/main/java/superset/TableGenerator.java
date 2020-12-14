@@ -57,7 +57,7 @@ public class TableGenerator {
 		}
 
 		// load KVStoreCollection from the given table adding the imputation type obtained from the table's name to each row
-		col.addAll(KVStoreUtil.readFromMySQLQuery(isysDBAdapter, String.format("SELECT * FROM %s WHERE metric=\"par10\"", table), commonFields));
+		col.addAll(KVStoreUtil.readFromMySQLQuery(isysDBAdapter, String.format("SELECT DISTINCT * FROM %s WHERE metric=\"par10\"", table), commonFields));
 	}
 
 	public static void main(final String[] args) throws SQLException, IOException {
@@ -133,7 +133,7 @@ public class TableGenerator {
 			}
 
 			// if the entry has a rank make it visible in the table
-			if (store.containsKey("rank")) {
+			if (store.containsKey("rank")) {	
 				StringBuilder sb = new StringBuilder();
 				sb.append(store.getAsString("entry"));
 
@@ -143,9 +143,11 @@ public class TableGenerator {
 				sb.append(store.getAsString("rank"));
 
 				// TODO: This should at least be removed for the submission.
-				sb.append("/");
-				// number of folds evaluated so far (shoudl definitely be commented out/removed for submission)
-				sb.append(store.getAsStringList("fold").size());
+				if (store.getAsString(IMP_TYPE).equals("schmee-hahn")){	
+					sb.append("/");
+					// number of folds evaluated so far (should definitely be commented out/removed for submission)
+					sb.append(store.getAsStringList("fold").size());
+				}
 				// TODO: /End
 				sb.append(")");
 
@@ -161,7 +163,7 @@ public class TableGenerator {
 					sigAppendix = "$\\bullet$";
 					break;
 				case SUPERIOR:
-					sigAppendix = "$\\circ";
+					sigAppendix = "$\\circ$";
 					break;
 				case TIE:
 					sigAppendix = "$\\phantom{\\bullet}$";
